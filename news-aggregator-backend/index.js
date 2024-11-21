@@ -12,7 +12,7 @@ const cors = require('cors');
 const app = express();
 
 // Set the port the server will run on
-const PORT = process.env.PORT || 6000;
+const PORT = process.env.PORT || 6003;
 
 // Middleware
 app.use(express.json());
@@ -37,6 +37,7 @@ mongoose.connect(mongoUri, {
 const User = require('./models/User'); // Ensure the User model is in the correct directory
 
 // Route to create a new user (register)
+// works 
 app.post('/users', async (req, res) => {
   try {
     const { name, email, age, preferences } = req.body;
@@ -56,6 +57,7 @@ app.post('/users', async (req, res) => {
 });
 
 // Route to get all users
+// works 
 app.get('/users', async (req, res) => {
   try {
     const users = await User.find();
@@ -66,7 +68,10 @@ app.get('/users', async (req, res) => {
   }
 });
 
+
+
 // Route to update user preferences by email
+// works 
 app.put('/users/email/:email/preferences', async (req, res) => {
   try {
     const userEmail = req.params.email;
@@ -112,7 +117,9 @@ app.post('/users/fetch-news', async (req, res) => {
     }
 
     // Make a request to the news service to get news based on user preferences
-    const newsServiceUrl = 'http://localhost:6001/news/fetch-by-preferences'; // Ensure this matches your service URL
+    // Ensure this matches your service URL
+    // was 6001
+    const newsServiceUrl = 'http://news-service:6001/news/fetch-by-preferences'; 
     const response = await axios.post(newsServiceUrl, { preferences: user.preferences });
 
     // Send the response to the client
@@ -127,3 +134,11 @@ app.post('/users/fetch-news', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
 });
+
+
+
+
+
+
+
+
