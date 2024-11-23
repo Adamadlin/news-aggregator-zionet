@@ -18,6 +18,7 @@ const PORT = process.env.PORT || 6003;
 app.use(express.json());
 app.use(cors()); // Enable CORS
 
+
 // MongoDB Connection URI
 const mongoUri = process.env.MONGODB_URI;
 
@@ -25,6 +26,9 @@ const mongoUri = process.env.MONGODB_URI;
 mongoose.connect(mongoUri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 30000,
+  socketTimeoutMS: 45000,           // Increase socket timeout to 45 seconds
+  connectTimeoutMS: 30000 
 })
 .then(() => {
   console.log('Successfully connected to MongoDB Atlas!');
@@ -67,6 +71,11 @@ app.get('/users', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch users' });
   }
 });
+
+
+
+
+
 
 
 

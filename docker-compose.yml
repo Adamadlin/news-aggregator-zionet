@@ -1,11 +1,12 @@
 
+
 # version: '3.8'
 
 # services:
 #   user-service:
 #     build: ./user-service
 #     ports:
-#       - "3000:6000"
+#       - "3000:6000"  # Changed from "3000:6000" to "6000:6000" to avoid confusion
 #     environment:
 #       - DAPR_APP_ID=user-service
 #     labels:
@@ -18,7 +19,7 @@
 #   news-service:
 #     build: ./news-service
 #     ports:
-#       - "6001:6001"
+#       - "6001:6001"  # Keep using port 6001 for both host and container
 #     environment:
 #       - DAPR_APP_ID=news-service
 #     labels:
@@ -33,7 +34,7 @@
 #   notification-service:
 #     build: ./notification-service
 #     ports:
-#       - "6002:6002"
+#       - "6002:6002"  # Keep using port 6002 for both host and container
 #     environment:
 #       - DAPR_APP_ID=notification-service
 #     labels:
@@ -49,7 +50,7 @@
 #   news-aggregator-backend:
 #     build: ./news-aggregator-backend # Update this path to the correct location
 #     ports:
-#       - "6003:6003"
+#       - "6003:6003"  # Changed to use port 6003 for both host and container
 #     environment:
 #       - DAPR_APP_ID=news-aggregator-backend
 #     labels:
@@ -65,7 +66,7 @@
 #   redis:
 #     image: redis
 #     ports:
-#       - "6380:6379"
+#       - "6381:6379"  # Changed to avoid port conflict; 6379 might be in use on host, using 6381 for host
 #     networks:
 #       - app-network
 
@@ -74,13 +75,17 @@
 #     driver: bridge
 
 
+
+
+
+
 version: '3.8'
 
 services:
   user-service:
     build: ./user-service
     ports:
-      - "6000:6000"  # Changed from "3000:6000" to "6000:6000" to avoid confusion
+      - "3000:6000"  # Changed from "3000:6000" to "6000:6000" to avoid confusion
     environment:
       - DAPR_APP_ID=user-service
     labels:
@@ -133,6 +138,21 @@ services:
       - "dapr.io/app-port=6003"
     depends_on:
       - user-service
+      - news-service
+    networks:
+      - app-network
+
+  news-aggregator-frontend:
+    build: ./news-aggregator-frontend # Path to the folder containing the frontend code
+    ports:
+      - "3001:3000"  # Expose frontend container port 3000 to host port 3001
+    environment:
+      - REACT_APP_USER_SERVICE_URL=http://user-service:6000
+      - REACT_APP_NOTIFICATION_SERVICE_URL=http://notification-service:6002
+      - REACT_APP_NEWS_SERVICE_URL=http://news-service:6001
+    depends_on:
+      - user-service
+      - notification-service
       - news-service
     networks:
       - app-network
