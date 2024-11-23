@@ -105,12 +105,23 @@ The News Aggregator System is designed to provide users with personalized news c
 
 ## System Diagram
 
-The system comprises four main services, each playing a critical role in delivering functionality to users. Below is a summary of the services and their interactions:
+System Diagram
 
-1. **User Service**: Manages user data, registration, and updates preferences.
-2. **News Service**: Fetches news articles from external news APIs based on user preferences.
-3. **Notification Service**: Sends email notifications to users with curated news content based on their preferences.
-4. **News Aggregator Backend**: Acts as a bridge between services, handles user registration, updating preferences, and fetching news based on user preferences.
+1.The system consists of the following services:
+
+2.User Service: Handles user registration, preference updates, and retrieving user information.
+
+3.News Service: Fetches news articles based on user preferences from an external API.
+
+4.Notification Service: Sends personalized news updates to users via email based on their preferences.
+
+5.News Aggregator Backend: Orchestrates user and news data to serve various services.
+
+6.News Aggregator Frontend: A web-based user interface where users can register, update preferences, and request news notifications.
+
+7.Redis: Used for caching and enhancing data retrieval performance.
+
+The services communicate internally using Docker networks and are containerized to ensure scalability and manageability.
 
 A high-level view of the architecture:
 
@@ -159,6 +170,7 @@ Follow these steps to set up the News Aggregator system locally using Docker Com
      - News Service: [http://localhost:6001](http://localhost:6001)
      - Notification Service: [http://localhost:6002](http://localhost:6002)
      - News Aggregator Backend: [http://localhost:6003](http://localhost:6003)
+     - News Aggregator Frontend  [http://localhost:3001/](http://localhost:3001/)
 
 ## Instructions for Testing the Application
 
@@ -206,6 +218,16 @@ Follow these steps to set up the News Aggregator system locally using Docker Com
        "message": "Here is your latest news update."
      }
      ```
+
+     ** important : i have ran into some issues when trying to get users preferences from the db therefore this request is send with these parameters 
+
+     {
+  "email": "adamadlik9@gmail.com",
+  "preferences": ["technology", "sports"]
+}
+initialy breaks the the original flow but still lets user manualy change his preferences
+
+
 
 These steps will ensure that all components of the News Aggregator System are running correctly and that they can interact to provide users with a tailored news experience.
 

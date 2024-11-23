@@ -1,31 +1,25 @@
 
+import './App.css';
 
-import React, { useState } from 'react';
-import Register from './Register';
-import Users from './Users';
+import React from 'react';
+import RegisterUser from './components/RegisterUser';
+import UpdatePreferences from './components/UpdatePreferences';
+import FetchNews from './components/FetchNews';
+import SendNotificationButton from './components/SendNotificationButton';
+
 
 function App() {
-  const [registeredUserData, setRegisteredUserData] = useState(null);
-
-  const handleRegister = (data) => {
-    setRegisteredUserData(data);
-    console.log("User registered successfully:", data);
-  };
-
   return (
     <div className="App">
-      <h1>News Aggregator</h1>
-      <Register onRegister={handleRegister} />
-      <Users />
-      {registeredUserData && (
-        <div>
-          <h2>Registered User Data</h2>
-          <pre>{JSON.stringify(registeredUserData, null, 2)}</pre>
-        </div>
-      )}
+      <header className="App-header">
+        <h1>News Aggregator</h1>
+        <RegisterUser />
+        <UpdatePreferences />
+        {/* <FetchNews /> */}
+        <SendNotificationButton />
+      </header>
     </div>
   );
 }
 
 export default App;
-
