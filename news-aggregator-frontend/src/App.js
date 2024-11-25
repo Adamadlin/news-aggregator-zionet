@@ -4,7 +4,6 @@ import './App.css';
 import React from 'react';
 import RegisterUser from './components/RegisterUser';
 import UpdatePreferences from './components/UpdatePreferences';
-import FetchNews from './components/FetchNews';
 import SendNotificationButton from './components/SendNotificationButton';
 
 
@@ -15,7 +14,6 @@ function App() {
         <h1>News Aggregator</h1>
         <RegisterUser />
         <UpdatePreferences />
-        {/* <FetchNews /> */}
         <SendNotificationButton />
       </header>
     </div>

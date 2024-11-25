@@ -41,8 +41,7 @@ app.post('/register', async (req, res) => {
 
   // Fetch news after registration
   try {
-    const newsResponse = await axios.get('http://localhost:6001/news'); // Replace with your news API URL
-    // const newsResponse = await axios.get('http://user-service:6001/news'); // Replace with your news API URL
+    const newsResponse = await axios.get('http://localhost:6001/news'); 
 
     // Respond with the registered user and the news
     res.status(201).json({
