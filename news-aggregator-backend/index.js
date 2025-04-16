@@ -62,6 +62,8 @@ app.post('/users', async (req, res) => {
 
 // Route to get all users
 // works 
+
+
 app.get('/users', async (req, res) => {
   try {
     const users = await User.find();
