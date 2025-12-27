@@ -1,3 +1,5 @@
+
+
 // src/components/RegisterUser.js
 import React, { useState } from 'react';
 import axios from 'axios';
@@ -12,20 +14,28 @@ function RegisterUser() {
   const [message, setMessage] = useState('');
 
   const handleRegister = async () => {
+    if (!name || !email || !preferences) {
+      setMessage('Error: Please fill all required fields.');
+      return;
+    }
+
     try {
       const response = await axios.post('http://localhost:6003/users', {
         name,
         email,
-        age: Number(age),
-        preferences: preferences.split(',').map((p) => p.trim()),
+        age: age ? Number(age) : undefined,
+        preferences: preferences.split(',').map((p) => p.trim()).filter(Boolean),
       });
-      setMessage(response.data.message);
+
+      setMessage(response.data.message || 'User registered successfully!');
       setName('');
       setEmail('');
       setAge('');
       setPreferences('');
     } catch (error) {
-      setMessage('Error: ' + error.response?.data?.error || error.message);
+      console.error('Error registering user:', error);
+      const errMsg = error.response?.data?.error || error.message;
+      setMessage('Error: ' + errMsg);
     }
   };
 
@@ -59,7 +69,6 @@ function RegisterUser() {
             variant="outlined"
             value={age}
             onChange={(e) => setAge(e.target.value)}
-            required
             fullWidth
           />
           <TextField
@@ -67,7 +76,7 @@ function RegisterUser() {
             variant="outlined"
             value={preferences}
             onChange={(e) => setPreferences(e.target.value)}
-            helperText="Enter preferences separated by commas"
+            helperText="Enter preferences separated by commas (e.g. technology,sports)"
             required
             fullWidth
           />
@@ -81,7 +90,7 @@ function RegisterUser() {
             Register
           </Button>
           {message && (
-            <Typography color={message.includes('Error') ? 'error' : 'success'}>
+            <Typography color={message.startsWith('Error') ? 'error' : 'success.main'}>
               {message}
             </Typography>
           )}

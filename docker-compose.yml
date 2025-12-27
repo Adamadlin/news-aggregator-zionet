@@ -1,30 +1,112 @@
 
+# version: '3.8'
+
+# services:
+#   user-service:
+#     build: ./user-service
+#     ports:
+#       - "3000:6000"  # Changed from "3000:6000" to "6000:6000" to avoid confusion
+#     environment:
+#       - DAPR_APP_ID=user-service
+#     labels:
+#       - "dapr.io/enabled=true"
+#       - "dapr.io/app-id=user-service"
+#       - "dapr.io/app-port=6000"
+#     networks:
+#       - app-network
+
+#   news-service:
+#     build: ./news-service
+#     ports:
+#       - "6001:6001"  # Keep using port 6001 for both host and container
+#     environment:
+#       - DAPR_APP_ID=news-service
+#     labels:
+#       - "dapr.io/enabled=true"
+#       - "dapr.io/app-id=news-service"
+#       - "dapr.io/app-port=6001"
+#     depends_on:
+#       - user-service
+#     networks:
+#       - app-network
+
+#   notification-service:
+#     build: ./notification-service
+#     ports:
+#       - "6002:6002"  # Keep using port 6002 for both host and container
+#     environment:
+#       - DAPR_APP_ID=notification-service
+#     env_file:
+#       - ./notification-service/.env
+#     labels:
+#       - "dapr.io/enabled=true"
+#       - "dapr.io/app-id=notification-service"
+#       - "dapr.io/app-port=6002"
+#     depends_on:
+#       - user-service
+#       - news-service
+#     networks:
+#       - app-network
+
+#   news-aggregator-backend:
+#     build: ./news-aggregator-backend # Update this path to the correct location
+#     ports:
+#       - "6003:6003"  # Changed to use port 6003 for both host and container
+#     environment:
+#       - DAPR_APP_ID=news-aggregator-backend
+#     labels:
+#       - "dapr.io/enabled=true"
+#       - "dapr.io/app-id=news-aggregator-backend"
+#       - "dapr.io/app-port=6003"
+#     depends_on:
+#       - user-service
+#       - news-service
+#     networks:
+#       - app-network
+
+#   news-aggregator-frontend:
+#     build: ./news-aggregator-frontend # Path to the folder containing the frontend code
+#     ports:
+#       - "3001:3000"  # Expose frontend container port 3000 to host port 3001
+#     environment:
+#       - REACT_APP_USER_SERVICE_URL=http://user-service:6000
+#       - REACT_APP_NOTIFICATION_SERVICE_URL=http://notification-service:6002
+#       - REACT_APP_NEWS_SERVICE_URL=http://news-service:6001
+#     depends_on:
+#       - user-service
+#       - notification-service
+#       - news-service
+#     networks:
+#       - app-network
+
+#   redis:
+#     image: redis
+#     ports:
+#       - "6381:6379"  # Changed to avoid port conflict; 6379 might be in use on host, using 6381 for host
+#     networks:
+#       - app-network
+
+# networks:
+#   app-network:
+#     driver: bridge
+
+
 version: '3.8'
 
 services:
   user-service:
     build: ./user-service
     ports:
-      - "3000:6000"  # Changed from "3000:6000" to "6000:6000" to avoid confusion
-    environment:
-      - DAPR_APP_ID=user-service
-    labels:
-      - "dapr.io/enabled=true"
-      - "dapr.io/app-id=user-service"
-      - "dapr.io/app-port=6000"
+      - "6000:6000"
+    restart: unless-stopped
     networks:
       - app-network
 
   news-service:
     build: ./news-service
     ports:
-      - "6001:6001"  # Keep using port 6001 for both host and container
-    environment:
-      - DAPR_APP_ID=news-service
-    labels:
-      - "dapr.io/enabled=true"
-      - "dapr.io/app-id=news-service"
-      - "dapr.io/app-port=6001"
+      - "6001:6001"
+    restart: unless-stopped
     depends_on:
       - user-service
     networks:
@@ -33,13 +115,10 @@ services:
   notification-service:
     build: ./notification-service
     ports:
-      - "6002:6002"  # Keep using port 6002 for both host and container
-    environment:
-      - DAPR_APP_ID=notification-service
-    labels:
-      - "dapr.io/enabled=true"
-      - "dapr.io/app-id=notification-service"
-      - "dapr.io/app-port=6002"
+      - "6002:6002"
+    restart: unless-stopped
+    env_file:
+      - ./notification-service/.env
     depends_on:
       - user-service
       - news-service
@@ -47,15 +126,10 @@ services:
       - app-network
 
   news-aggregator-backend:
-    build: ./news-aggregator-backend # Update this path to the correct location
+    build: ./news-aggregator-backend
     ports:
-      - "6003:6003"  # Changed to use port 6003 for both host and container
-    environment:
-      - DAPR_APP_ID=news-aggregator-backend
-    labels:
-      - "dapr.io/enabled=true"
-      - "dapr.io/app-id=news-aggregator-backend"
-      - "dapr.io/app-port=6003"
+      - "6003:6003"
+    restart: unless-stopped
     depends_on:
       - user-service
       - news-service
@@ -63,9 +137,10 @@ services:
       - app-network
 
   news-aggregator-frontend:
-    build: ./news-aggregator-frontend # Path to the folder containing the frontend code
+    build: ./news-aggregator-frontend
     ports:
-      - "3001:3000"  # Expose frontend container port 3000 to host port 3001
+      - "3001:3000"
+    restart: unless-stopped
     environment:
       - REACT_APP_USER_SERVICE_URL=http://user-service:6000
       - REACT_APP_NOTIFICATION_SERVICE_URL=http://notification-service:6002
@@ -80,7 +155,8 @@ services:
   redis:
     image: redis
     ports:
-      - "6381:6379"  # Changed to avoid port conflict; 6379 might be in use on host, using 6381 for host
+      - "6381:6379"
+    restart: unless-stopped
     networks:
       - app-network
 
@@ -90,8 +166,6 @@ networks:
 
 
 
-
-
-
 # docker-compose build --no-cache
 # docker-compose up
+# http://localhost:3001/

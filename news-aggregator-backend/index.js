@@ -1,54 +1,39 @@
 
+
 // news-aggregator-backend/index.js
 require('dotenv').config();
 
-// Import dependencies
 const express = require('express');
 const mongoose = require('mongoose');
 const axios = require('axios');
 const cors = require('cors');
 
-// Create an instance of Express
 const app = express();
-
-// Set the port the server will run on
 const PORT = process.env.PORT || 6003;
 
-// Middleware
 app.use(express.json());
-app.use(cors()); // Enable CORS
+app.use(cors());
 
-
-// MongoDB Connection URI
 const mongoUri = process.env.MONGODB_URI;
 
-// Connect to MongoDB using Mongoose
-mongoose.connect(mongoUri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 30000,
-  socketTimeoutMS: 45000,           // Increase socket timeout to 45 seconds
-  connectTimeoutMS: 30000 
-})
-.then(() => {
-  console.log('Successfully connected to MongoDB Atlas!');
-})
-.catch((err) => {
-  console.error('Error connecting to MongoDB', err);
-});
+mongoose
+  .connect(mongoUri, {
+    serverSelectionTimeoutMS: 30000,
+    socketTimeoutMS: 45000,
+    connectTimeoutMS: 30000,
+  })
+  .then(() => console.log('Successfully connected to MongoDB Atlas!'))
+  .catch((err) => console.error('Error connecting to MongoDB', err));
 
-// Import the User model
-const User = require('./models/User'); // Ensure the User model is in the correct directory
+const User = require('./models/User');
 
-// Route to create a new user (register)
-// works 
+// ✅ Create user
 app.post('/users', async (req, res) => {
   try {
     const { name, email, age, preferences } = req.body;
 
-    // Validation for required fields
     if (!name || !email || !preferences) {
-      return res.status(400).json({ error: "Please provide name, email, and preferences." });
+      return res.status(400).json({ error: 'Please provide name, email, and preferences.' });
     }
 
     const newUser = new User({ name, email, age, preferences });
@@ -60,10 +45,7 @@ app.post('/users', async (req, res) => {
   }
 });
 
-// Route to get all users
-// works 
-
-
+// ✅ Get all users
 app.get('/users', async (req, res) => {
   try {
     const users = await User.find();
@@ -74,82 +56,83 @@ app.get('/users', async (req, res) => {
   }
 });
 
+// ✅ Get single user by email (needed by notification-service)
+app.get('/users/email/:email', async (req, res) => {
+  try {
+    const userEmail = req.params.email;
+    const user = await User.findOne({ email: userEmail });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+    res.json(user);
+  } catch (err) {
+    console.error('Error fetching user:', err);
+    res.status(500).json({ error: 'Failed to fetch user' });
+  }
+});
 
-
-
-
-
-
-
-// Route to update user preferences by email
-// works 
+// ✅ Update preferences
 app.put('/users/email/:email/preferences', async (req, res) => {
   try {
     const userEmail = req.params.email;
     const { preferences } = req.body;
 
-    // Validation to ensure preferences are provided
     if (!preferences || !Array.isArray(preferences)) {
-      return res.status(400).json({ error: "Please provide an array of preferences." });
+      return res.status(400).json({ error: 'Please provide an array of preferences.' });
     }
 
-    // Find user by email and update preferences
     const updatedUser = await User.findOneAndUpdate(
-      { email: userEmail }, // Find the user by email
-      { preferences },      // Update the preferences field
-      { new: true, runValidators: true } // Return the updated user and validate input
+      { email: userEmail },
+      { preferences },
+      { new: true, runValidators: true }
     );
 
-    if (!updatedUser) {
-      return res.status(404).json({ error: "User not found." });
-    }
+    if (!updatedUser) return res.status(404).json({ error: 'User not found.' });
 
-    res.status(200).json({ message: 'User preferences updated successfully', user: updatedUser });
+    res.status(200).json({ message: 'Preferences updated', user: updatedUser });
   } catch (err) {
     console.error('Error updating user preferences:', err);
     res.status(500).json({ error: 'Failed to update preferences' });
   }
 });
 
-// POST endpoint to fetch news based on user preferences
+// ✅ Fetch news using SAVED preferences, and return a clean list: { articles: [...] }
 app.post('/users/fetch-news', async (req, res) => {
   const { email } = req.body;
 
-  // Validate email
-  if (!email) {
-    return res.status(400).json({ error: 'Please provide a valid email.' });
-  }
+  if (!email) return res.status(400).json({ error: 'Please provide a valid email.' });
 
   try {
-    // Find user in MongoDB by email
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    if (!Array.isArray(user.preferences) || user.preferences.length === 0) {
+      return res.status(400).json({ error: 'User has no preferences configured.' });
     }
 
-    // Make a request to the news service to get news based on user preferences
-    // Ensure this matches your service URL
-    // was 6001
-    const newsServiceUrl = 'http://news-service:6001/news/fetch-by-preferences'; 
+    const newsServiceUrl = 'http://news-service:6001/news/fetch-by-preferences';
     const response = await axios.post(newsServiceUrl, { preferences: user.preferences });
 
-    // Send the response to the client
-    res.status(200).json(response.data);
+    // news-service returns: { message, data: <newsdata.io response> }
+    const results = response.data?.data?.results || [];
+
+    // Normalize to what the frontend needs
+    const articles = results.map((a) => ({
+      title: a.title || 'Untitled',
+      link: a.link || a.url || '',
+      pubDate: a.pubDate || a.publishedAt || a.date || null,
+      source: a.source_id || a.source || '',
+    }));
+
+    res.status(200).json({
+      message: 'News fetched successfully',
+      preferences: user.preferences,
+      articles,
+    });
   } catch (error) {
     console.error('Error fetching news:', error.message);
     res.status(500).json({ error: 'Failed to fetch news' });
   }
 });
 
-// Start the server
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
 });
-
-
-
-
-
-
-
-

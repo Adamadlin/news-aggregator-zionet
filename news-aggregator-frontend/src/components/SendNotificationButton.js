@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import axios from 'axios';
 import { TextField, Button, Box, Typography, Container, Paper } from '@mui/material';
@@ -6,28 +7,21 @@ import SendIcon from '@mui/icons-material/Send';
 
 const SendNotificationButton = () => {
   const [email, setEmail] = useState('');
-  const [preferences, setPreferences] = useState('');
+  const [message, setMessage] = useState('');
 
   const handleSendNotification = async () => {
-    if (!email || !preferences) {
-      alert('Please provide both email and preferences.');
+    if (!email) {
+      setMessage('Please provide an email.');
       return;
     }
 
-    const preferencesArray = preferences.split(',').map(pref => pref.trim());
-
     try {
-      const response = await axios.post('http://localhost:6002/notify', {
-        email,
-        preferences: preferencesArray
-      });
-      
-      alert(response.data.message);
+      const res = await axios.post('http://localhost:6002/notify', { email });
+      setMessage(res.data.message || 'Notification sent ✅');
       setEmail('');
-      setPreferences('');
-    } catch (error) {
-      console.error('Error sending notification:', error);
-      alert('Failed to send notification. Please try again later.');
+    } catch (err) {
+      const msg = err?.response?.data?.error || err.message;
+      setMessage('Error: ' + msg);
     }
   };
 
@@ -36,8 +30,9 @@ const SendNotificationButton = () => {
       <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Typography variant="h5" component="h2" gutterBottom>
-            Send Notification
+            Send Notification (uses saved preferences)
           </Typography>
+
           <TextField
             label="Email"
             type="email"
@@ -47,16 +42,7 @@ const SendNotificationButton = () => {
             required
             fullWidth
           />
-          <TextField
-            label="Preferences"
-            type="text"
-            variant="outlined"
-            value={preferences}
-            onChange={(e) => setPreferences(e.target.value)}
-            helperText="Enter preferences separated by commas"
-            required
-            fullWidth
-          />
+
           <Button
             variant="contained"
             color="primary"
@@ -64,13 +50,18 @@ const SendNotificationButton = () => {
             endIcon={<SendIcon />}
             fullWidth
           >
-            Send Notification
+            Send Email
           </Button>
+
+          {message && (
+            <Typography color={message.startsWith('Error') ? 'error' : 'success.main'}>
+              {message}
+            </Typography>
+          )}
         </Box>
       </Paper>
     </Container>
-
-);
+  );
 };
 
 export default SendNotificationButton;

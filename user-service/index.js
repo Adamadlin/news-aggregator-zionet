@@ -1,57 +1,49 @@
 
 
+
 // user-service/index.js
 const express = require('express');
 const bodyParser = require('body-parser');
-const cors = require('cors') 
-const axios = require('axios'); // Import axios for making HTTP requests
+const cors = require('cors');
+const axios = require('axios');
+
 const app = express();
 const PORT = process.env.PORT || 6000;
 
-
 // Middleware
 app.use(bodyParser.json());
-app.use(cors({ origin: 'http://localhost:3000' })); // Allow requests from frontend
+app.use(cors({ origin: 'http://localhost:3000' }));
 
-// In-memory storage for users (replace with a database in production)
+// In-memory storage for users (DEMO ONLY)
 let users = [];
 
-// POST endpoint to register a user
+// ✅ POST: Register user and fetch news (demo)
 app.post('/register', async (req, res) => {
   const { name, email, preferences } = req.body;
 
-  // Basic validation
   if (!name || !email || !preferences) {
     return res.status(400).json({ error: "Please provide name, email, and preferences." });
   }
 
-  // Create a new user object
   const newUser = {
-    id: users.length + 1,  // Generate a simple ID
+    id: users.length + 1,
     name,
     email,
     preferences,
   };
 
-  // Store the user in the in-memory users array
   users.push(newUser);
 
-  // Log all registered users to the console
-  console.log("Current registered users:", users);
-
-  // Fetch news after registration
   try {
-    const newsResponse = await axios.get('http://localhost:6001/news'); 
-
-    // Respond with the registered user and the news
+    // IMPORTANT: use Docker service name, not localhost
+    const newsResponse = await axios.get('http://news-service:6001/news');
     res.status(201).json({
       message: "User registered successfully!",
       user: newUser,
-      news: newsResponse.data, // Include the news data in the response
+      news: newsResponse.data,
     });
   } catch (error) {
-    console.error("Error fetching news:", error);
-    // Respond with the registered user but without news if the news request fails
+    console.error("Error fetching news:", error.message);
     res.status(201).json({
       message: "User registered successfully, but failed to fetch news.",
       user: newUser,
@@ -60,16 +52,36 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// GET endpoint to retrieve all users
+// ✅ PUT: Update preferences for a specific user by email (demo)
+app.put('/users/email/:email/preferences', (req, res) => {
+  const { email } = req.params;
+  const { preferences } = req.body;
+
+  const user = users.find((u) => u.email === email);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  user.preferences = preferences;
+  return res.status(200).json({ message: 'Preferences updated', user });
+});
+
+// ✅ GET: All users (demo)
 app.get('/users', (req, res) => {
   res.json(users);
 });
 
-// Endpoint to confirm user service is running
+// ✅ GET: Health check
 app.get('/user', (req, res) => {
   res.status(200).json({ message: "User service is running!" });
 });
 
-app.listen(PORT, () => {
-  console.log(`User service running on port ${PORT}`);
-});
+// ✅ Run only if not testing
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`User service running on port ${PORT}`);
+  });
+}
+
+// ✅ Export app for testing
+module.exports = app;

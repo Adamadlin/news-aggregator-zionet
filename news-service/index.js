@@ -5,8 +5,9 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
 const cors = require('cors');
+
 const app = express();
-const port = 6001;
+const port = process.env.PORT || 6001;
 
 // Enable CORS
 app.use(cors());
@@ -19,8 +20,10 @@ const fetchNews = async (preferences) => {
   try {
     // Join preferences into a single comma-separated string for the API request
     const query = preferences.join(',');
-    const response = await axios.get(`https://newsdata.io/api/1/latest?apikey=pub_59395a65f923bb130664ba90978da51e1416c&q=${query}`);
-    return response.data;
+    const response = await axios.get(
+      `https://newsdata.io/api/1/latest?apikey=pub_59395a65f923bb130664ba90978da51e1416c&q=${query}`
+    );
+    return response.data; // This contains .results
   } catch (error) {
     console.error('Error fetching news data:', error.message);
     throw error;
@@ -42,13 +45,10 @@ app.post('/news/fetch-by-preferences', async (req, res) => {
   }
 
   try {
-    // Fetch the news based on user preferences
     const newsData = await fetchNews(preferences);
-    
-    // Send the fetched data to the client
     res.status(200).json({
       message: 'News fetched successfully based on preferences',
-      data: newsData,
+      data: newsData, // newsData.results is the array of articles
     });
   } catch (error) {
     console.error('Error fetching news:', error.message);
