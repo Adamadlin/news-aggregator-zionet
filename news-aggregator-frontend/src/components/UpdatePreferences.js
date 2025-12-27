@@ -1,3 +1,4 @@
+
 // src/components/UpdatePreferences.js
 import React, { useState } from 'react';
 import axios from 'axios';
@@ -10,17 +11,26 @@ function UpdatePreferences() {
   const [message, setMessage] = useState('');
 
   const handleUpdate = async () => {
+    if (!email || !preferences) {
+      setMessage('Error: Please provide email and new preferences.');
+      return;
+    }
+
     try {
-      const response = await axios.put(`http://localhost:6003/users/email/${email}/preferences`, {
-        preferences: preferences.split(',').map((p) => p.trim()),
-      });
+      const response = await axios.put(
+        `http://localhost:6003/users/email/${encodeURIComponent(email)}/preferences`,
+        {
+          preferences: preferences.split(',').map((p) => p.trim()).filter(Boolean),
+        }
+      );
 
-      setMessage(response.data.message);
-
+      setMessage(response.data.message || 'Preferences updated successfully!');
       setEmail('');
-    setPreferences('');
+      setPreferences('');
     } catch (error) {
-      setMessage('Error: ' + error.response?.data?.error || error.message);
+      console.error('Error updating preferences:', error);
+      const errMsg = error.response?.data?.error || error.message;
+      setMessage('Error: ' + errMsg);
     }
   };
 
@@ -59,7 +69,7 @@ function UpdatePreferences() {
             Update Preferences
           </Button>
           {message && (
-            <Typography color={message.includes('Error') ? 'error' : 'success'}>
+            <Typography color={message.startsWith('Error') ? 'error' : 'success.main'}>
               {message}
             </Typography>
           )}

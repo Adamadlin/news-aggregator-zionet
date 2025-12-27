@@ -1,127 +1,108 @@
 
-// Import dependencies
+
+// notification-service/index.js
+require('dotenv').config();
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const axios = require('axios');
-const cron = require('node-cron');
 const cors = require('cors');
+
 const app = express();
-const port = 6002;
+const PORT = process.env.PORT || 6002;
 
 app.use(bodyParser.json());
 
-// Enable CORS for all routes
-app.use(cors({
-  origin: 'http://localhost:3001', // Set to your frontend origin
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
-
-// Handle preflight requests
+// ✅ Allow your frontend (host is 3001)
+app.use(
+  cors({
+    origin: ['http://localhost:3001', 'http://localhost:3000'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 app.options('*', cors());
 
-// Setup nodemailer transporter
+// ✅ SMTP creds must exist in container env
+if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+  console.error('❌ Missing SMTP_USER / SMTP_PASS in notification-service environment');
+}
+
+// ✅ Gmail transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'adam.bugattiveyron@gmail.com',
-    pass: 'ijht jixr cpdj nmyf' // Replace with your app-specific password or email password
-  }
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS, // app password
+  },
 });
 
-// Function to fetch news and send notifications
-const sendNotification = async (userEmail, userPreferences) => {
-  try {
-    // Fetch news based on user preferences
-    const newsServiceUrl = 'http://localhost:6001/news/fetch-by-preferences'; // Update URL if needed
-    const response = await axios.post(newsServiceUrl, { preferences: userPreferences });
+// Helper: fetch user from backend by email (MongoDB)
+async function fetchUserByEmail(email) {
+  const url = `http://news-aggregator-backend:6003/users/email/${encodeURIComponent(email)}`;
+  const res = await axios.get(url);
+  return res.data;
+}
 
-    // Extract titles and links from the news data
-    const newsData = response.data.data.results; // Assuming the response structure contains "data.results"
-    let messageContent = 'Here are your latest news updates:\n\n';
+// Helper: fetch news by preferences from news-service
+async function fetchNewsByPreferences(preferences) {
+  const url = 'http://news-service:6001/news/fetch-by-preferences';
+  const res = await axios.post(url, { preferences });
+  return res.data; // { message, data: newsDataIoResponse }
+}
 
-    // Loop over each article and add it to the message content
-    newsData.forEach(article => {
-      messageContent += `Title: ${article.title}\nURL: ${article.link}\n\n`;
-    });
-
-    // Define email content with the fetched news data
-    const mailOptions = {
-      from: 'adam.bugattiveyron@gmail.com',
-      to: userEmail,
-      subject: 'News Update',
-      text: messageContent
-
-    };
-
-    // Send the email
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error('Failed to send email', error);
-      } else {
-        console.log('Email sent', info);
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching news or sending email:', error.message);
-  }
-};
-
-// Endpoint to send a one-time notification
+// ✅ POST /notify  (Frontend sends ONLY { email })
 app.post('/notify', async (req, res) => {
-  const { email, preferences } = req.body;
+  const { email } = req.body;
 
-  // Validate input
-  if (!email || !preferences) {
-    return res.status(400).json({ error: 'Please provide a valid email and preferences.' });
-  }
+  if (!email) return res.status(400).json({ error: 'Please provide a valid email.' });
 
   try {
-    // Fetch news based on user preferences
-    const newsServiceUrl = 'http://news-service:6001/news/fetch-by-preferences';
-    const response = await axios.post(newsServiceUrl, { preferences });
+    // 1) Get user + preferences from DB
+    const user = await fetchUserByEmail(email);
 
-    // Extract titles and links from the news data
-    const newsData = response.data.data.results; // Assuming the response structure contains "data.results"
-    let messageContent = 'Here are your latest news updates:\n\n';
+    if (!user?.preferences || !Array.isArray(user.preferences) || user.preferences.length === 0) {
+      return res.status(400).json({ error: 'User has no preferences configured.' });
+    }
 
-    // Loop over each article and add it to the message content
-    newsData.forEach(article => {
-      messageContent += `Title: ${article.title}\nURL: ${article.link}\n\n`;
+    // 2) Fetch news using preferences
+    const newsPayload = await fetchNewsByPreferences(user.preferences);
+
+    // news-service returns: { message, data: <newsdata.io response> }
+    const articles = newsPayload?.data?.results || [];
+    if (!articles.length) {
+      return res.json({ message: 'No articles found for this user. Email not sent.' });
+    }
+
+    // 3) Build email
+    let text = `Hi ${user.name || ''}\n\nHere are your latest news updates for: ${user.preferences.join(
+      ', '
+    )}\n\n`;
+
+    articles.slice(0, 15).forEach((a, i) => {
+      text += `${i + 1}) ${a.title}\n${a.link}\n\n`;
     });
 
-    // Define email content with the fetched news data
-    const mailOptions = {
-      from: 'adam.bugattiveyron@gmail.com',
+    // 4) Send email
+    const info = await transporter.sendMail({
+      from: process.env.SMTP_USER,
       to: email,
-      subject: 'News Update',
-      text: messageContent
-    };
-
-    // Send the email
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error('Failed to send email', error);
-        return res.status(500).json({ error: 'Failed to send email' });
-      }
-      res.json({ message: 'Email sent', info });
+      subject: 'News Update (based on your saved preferences)',
+      text,
     });
 
-  } catch (error) {
-    console.error('Error fetching news or sending email:', error.message);
-    res.status(500).json({ error: 'Failed to fetch news or send email' });
+    console.log('✅ Email sent:', info.response || info);
+
+    return res.json({ message: 'Email sent ✅', info });
+  } catch (err) {
+    console.error('❌ /notify failed:', err?.message || err);
+    return res.status(500).json({ error: 'Failed to send notification' });
   }
 });
 
-// Endpoint to confirm the service is running
 app.get('/notifications', (req, res) => {
   res.json({ message: 'Notification service is working!' });
 });
 
-// Start the server
-app.listen(port, () => {
-  console.log(`Notification Service running on port ${port}`);
-});
-
-
+app.listen(PORT, () => console.log(`Notification Service running on port ${PORT}`));
