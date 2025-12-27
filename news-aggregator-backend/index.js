@@ -1,5 +1,4 @@
 
-
 // news-aggregator-backend/index.js
 require('dotenv').config();
 
@@ -14,18 +13,25 @@ const PORT = process.env.PORT || 6003;
 app.use(express.json());
 app.use(cors());
 
-const mongoUri = process.env.MONGODB_URI;
+const User = require('./models/User');
 
-mongoose
-  .connect(mongoUri, {
+// ✅ Connect function (tests will call this)
+async function connectToMongo() {
+  const mongoUri = process.env.MONGODB_URI;
+
+  if (!mongoUri) {
+    throw new Error('MONGODB_URI is missing. Check your .env or test env.');
+  }
+
+  // Prevent re-connecting in tests / hot reload
+  if (mongoose.connection.readyState === 1) return;
+
+  await mongoose.connect(mongoUri, {
     serverSelectionTimeoutMS: 30000,
     socketTimeoutMS: 45000,
     connectTimeoutMS: 30000,
-  })
-  .then(() => console.log('Successfully connected to MongoDB Atlas!'))
-  .catch((err) => console.error('Error connecting to MongoDB', err));
-
-const User = require('./models/User');
+  });
+}
 
 // ✅ Create user
 app.post('/users', async (req, res) => {
@@ -38,9 +44,16 @@ app.post('/users', async (req, res) => {
 
     const newUser = new User({ name, email, age, preferences });
     await newUser.save();
+
     res.status(201).json({ message: 'User created successfully', user: newUser });
   } catch (err) {
     console.error('Error creating user:', err);
+
+    // nice-to-have: duplicate email handling
+    if (err.code === 11000) {
+      return res.status(409).json({ error: 'Email already exists.' });
+    }
+
     res.status(500).json({ error: 'Failed to create user' });
   }
 });
@@ -94,7 +107,7 @@ app.put('/users/email/:email/preferences', async (req, res) => {
   }
 });
 
-// ✅ Fetch news using SAVED preferences, and return a clean list: { articles: [...] }
+// ✅ Fetch news using SAVED preferences
 app.post('/users/fetch-news', async (req, res) => {
   const { email } = req.body;
 
@@ -111,10 +124,8 @@ app.post('/users/fetch-news', async (req, res) => {
     const newsServiceUrl = 'http://news-service:6001/news/fetch-by-preferences';
     const response = await axios.post(newsServiceUrl, { preferences: user.preferences });
 
-    // news-service returns: { message, data: <newsdata.io response> }
     const results = response.data?.data?.results || [];
 
-    // Normalize to what the frontend needs
     const articles = results.map((a) => ({
       title: a.title || 'Untitled',
       link: a.link || a.url || '',
@@ -133,6 +144,15 @@ app.post('/users/fetch-news', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Backend server running on port ${PORT}`);
-});
+// ✅ Only listen in real runs (NOT in tests)
+if (process.env.NODE_ENV !== 'test') {
+  connectToMongo()
+    .then(() => {
+      console.log('Successfully connected to MongoDB!');
+      app.listen(PORT, () => console.log(`Backend server running on port ${PORT}`));
+    })
+    .catch((err) => console.error('Error connecting to MongoDB', err));
+}
+
+// ✅ Export for tests
+module.exports = { app, connectToMongo };
