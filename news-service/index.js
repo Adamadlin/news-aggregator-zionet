@@ -60,3 +60,4 @@ app.post('/news/fetch-by-preferences', async (req, res) => {
 app.listen(port, () => {
   console.log(`News Service running on port ${port}`);
 });
+
