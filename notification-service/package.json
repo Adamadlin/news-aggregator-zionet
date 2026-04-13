@@ -11,14 +11,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "axios": "^1.7.7",
+    "axios": "^1.15.0",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "dapr-client": "^3.4.1",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "node-cron": "^3.0.3",
-    "nodemailer": "^6.9.16"
+    "nodemailer": "^8.0.5"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",

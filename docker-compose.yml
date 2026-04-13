@@ -169,3 +169,31 @@ networks:
 # docker-compose build --no-cache
 # docker-compose up
 # http://localhost:3001/
+
+
+# [
+#   "technology",
+#   "business",
+#   "sports",
+#   "health",
+#   "science",
+#   "entertainment",
+#   "politics",
+#   "world"
+# ]
+
+
+
+
+# [
+#   "AI",
+#   "startup",
+#   "stock market",
+#   "bitcoin",
+#   "cybersecurity",
+#   "machine learning",
+#   "space",
+#   "climate change",
+#   "economy",
+#   "inflation"
+# ]
