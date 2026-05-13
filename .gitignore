@@ -26,4 +26,5 @@ Thumbs.db
 
 # tests / coverage
 coverage/
-user-service/coverage/
+user-service/coverage/full-audit-report.txt
+audit-*.json
